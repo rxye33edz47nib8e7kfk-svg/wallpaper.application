@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>壁紙メーカー</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c26;
+    --accent: #7c6cfc;
+    --accent2: #fc6c8f;
+    --text: #f0f0f8;
+    --text-dim: #8080a0;
+    --border: rgba(124,108,252,0.2);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(124,108,252,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,108,252,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .glow {
+    position: fixed;
+    width: 600px; height: 600px;
+    border-radius: 50%;
+    filter: blur(120px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .glow-1 { background: rgba(124,108,252,0.12); top: -200px; right: -100px; }
+  .glow-2 { background: rgba(252,108,143,0.08); bottom: -200px; left: -100px; }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 52px;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(2rem, 6vw, 3.2rem);
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subtitle {
+    color: var(--text-dim);
+    font-size: 0.9rem;
+    margin-top: 8px;
+    font-weight: 300;
+    letter-spacing: 0.05em;
+  }
+
+  /* Upload Zone */
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: 20px;
+    padding: 52px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: var(--surface);
+    position: relative;
+    overflow: hidden;
+    animation: fadeUp 0.6s 0.1s ease both;
+  }
+
+  .upload-zone::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(124,108,252,0.05), rgba(252,108,143,0.05));
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 40px rgba(124,108,252,0.15);
+  }
+
+  .upload-zone:hover::before, .upload-zone.drag-over::before { opacity: 1; }
+
+  .upload-icon {
+    font-size: 3rem;
+    margin-bottom: 16px;
+    display: block;
+    filter: drop-shadow(0 0 12px rgba(124,108,252,0.4));
+  }
+
+  .upload-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  .upload-hint {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+  }
+
+  #fileInput { display: none; }
+
+  /* Preview */
+  .preview-wrap {
+    display: none;
+    margin-top: 32px;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .preview-wrap.show { display: block; }
+
+  .preview-label {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .preview-img {
+    width: 100%;
+    max-height: 240px;
+    object-fit: contain;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+  }
+
+  .img-info {
+    display: flex;
+    gap: 16px;
+    margin-top: 10px;
+    font-size: 0.78rem;
+    color: var(--text-dim);
+  }
+
+  .img-info span { 
+    background: var(--surface2);
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+  }
+
+  /* Settings */
+  .settings {
+    margin-top: 36px;
+    display: grid;
+    gap: 20px;
+    animation: fadeUp 0.6s 0.2s ease both;
+  }
+
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 14px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    transition: border-color 0.3s;
+  }
+
+  .card:hover { border-color: rgba(124,108,252,0.4); }
+
+  /* Presets Grid */
+  .presets-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+  }
+
+  .preset-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 10px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s ease;
+    color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+  }
+
+  .preset-btn:hover {
+    border-color: var(--accent);
+    background: rgba(124,108,252,0.1);
+    transform: translateY(-1px);
+  }
+
+  .preset-btn.active {
+    border-color: var(--accent);
+    background: rgba(124,108,252,0.15);
+    box-shadow: 0 0 16px rgba(124,108,252,0.2);
+  }
+
+  .preset-name {
+    font-size: 0.8rem;
+    font-weight: 500;
+    margin-bottom: 3px;
+  }
+
+  .preset-size {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+  }
+
+  /* Custom size */
+  .size-inputs {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .size-input-wrap { flex: 1; }
+
+  .size-input-wrap label {
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    display: block;
+    margin-bottom: 6px;
+    letter-spacing: 0.05em;
+  }
+
+  .size-input-wrap input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-size: 0.95rem;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    transition: border-color 0.2s;
+    outline: none;
+  }
+
+  .size-input-wrap input:focus { border-color: var(--accent); }
+
+  .size-sep {
+    font-size: 1.2rem;
+    color: var(--text-dim);
+    margin-top: 20px;
+  }
+
+  /* Fit mode */
+  .fit-options {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+
+  .fit-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 8px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+    color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+  }
+
+  .fit-btn:hover { border-color: var(--accent); }
+  .fit-btn.active {
+    border-color: var(--accent);
+    background: rgba(124,108,252,0.15);
+  }
+
+  .fit-icon { font-size: 1.4rem; margin-bottom: 4px; }
+  .fit-name { font-size: 0.72rem; font-weight: 500; }
+  .fit-desc { font-size: 0.65rem; color: var(--text-dim); margin-top: 2px; }
+
+  /* BG color */
+  .bg-options {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .bg-swatch {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+  }
+
+  .bg-swatch.active { border-color: var(--accent); transform: scale(1.15); }
+
+  .bg-color-input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    color: var(--text);
+    font-size: 0.8rem;
+    font-family: monospace;
+    width: 100px;
+    outline: none;
+  }
+
+  /* Output format */
+  .format-options {
+    display: flex;
+    gap: 10px;
+  }
+
+  .format-btn {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    cursor: pointer;
+    text-align: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--text);
+    transition: all 0.2s;
+  }
+
+  .format-btn:hover { border-color: var(--accent); }
+  .format-btn.active {
+    border-color: var(--accent);
+    background: rgba(124,108,252,0.15);
+  }
+
+  /* Quality slider */
+  .quality-wrap {
+    margin-top: 14px;
+  }
+
+  .quality-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .quality-label { font-size: 0.78rem; color: var(--text-dim); }
+  .quality-value {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--accent);
+  }
+
+  input[type=range] {
+    width: 100%;
+    -webkit-appearance: none;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--surface2);
+    outline: none;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(124,108,252,0.5);
+  }
+
+  /* Convert button */
+  .convert-btn {
+    width: 100%;
+    margin-top: 32px;
+    padding: 18px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none;
+    border-radius: 14px;
+    color: white;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.05rem;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    animation: fadeUp 0.6s 0.3s ease both;
+  }
+
+  .convert-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .convert-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(124,108,252,0.4);
+  }
+
+  .convert-btn:hover::before { opacity: 1; }
+  .convert-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* Result */
+  .result {
+    display: none;
+    margin-top: 32px;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .result.show { display: block; }
+
+  .result-card {
+    background: var(--surface);
+    border: 1px solid rgba(124,108,252,0.3);
+    border-radius: 16px;
+    padding: 24px;
+    text-align: center;
+  }
+
+  .result-preview {
+    max-width: 200px;
+    max-height: 360px;
+    border-radius: 8px;
+    margin: 0 auto 16px;
+    display: block;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+
+  .result-info {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+  }
+
+  .download-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 28px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.3s;
+  }
+
+  .download-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(124,108,252,0.4);
+  }
+
+  canvas { display: none; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="glow glow-1"></div>
+<div class="glow glow-2"></div>
+
+<div class="container">
+  <header>
+    <div class="logo">壁紙メーカー</div>
+    <div class="subtitle">スマホ壁紙用に画像をリサイズ・変換</div>
+  </header>
+
+  <!-- Upload -->
+  <div class="upload-zone" id="uploadZone">
+    <input type="file" id="fileInput" accept="image/*">
+    <span class="upload-icon">🖼️</span>
+    <div class="upload-label">画像をドロップ、またはタップして選択</div>
+    <div class="upload-hint">JPG・PNG・WEBP・GIF 対応</div>
+  </div>
+
+  <!-- Preview -->
+  <div class="preview-wrap" id="previewWrap">
+    <div class="preview-label">元の画像</div>
+    <img class="preview-img" id="previewImg" alt="preview">
+    <div class="img-info" id="imgInfo"></div>
+  </div>
+
+  <!-- Settings -->
+  <div class="settings" id="settings">
+
+    <!-- Presets -->
+    <div class="card">
+      <div class="section-title">📱 デバイスプリセット</div>
+      <div class="presets-grid" id="presetsGrid">
+        <button class="preset-btn active" data-w="1179" data-h="2556" onclick="selectPreset(this)">
+          <div class="preset-name">iPhone 15 Pro</div>
+          <div class="preset-size">1179 × 2556</div>
+        </button>
+        <button class="preset-btn" data-w="1170" data-h="2532" onclick="selectPreset(this)">
+          <div class="preset-name">iPhone 14/13</div>
+          <div class="preset-size">1170 × 2532</div>
+        </button>
+        <button class="preset-btn" data-w="1290" data-h="2796" onclick="selectPreset(this)">
+          <div class="preset-name">iPhone 15 Plus</div>
+          <div class="preset-size">1290 × 2796</div>
+        </button>
+        <button class="preset-btn" data-w="1080" data-h="2340" onclick="selectPreset(this)">
+          <div class="preset-name">Android 標準</div>
+          <div class="preset-size">1080 × 2340</div>
+        </button>
+        <button class="preset-btn" data-w="1440" data-h="3088" onclick="selectPreset(this)">
+          <div class="preset-name">Pixel 8 Pro</div>
+          <div class="preset-size">1440 × 3088</div>
+        </button>
+        <button class="preset-btn" data-w="1080" data-h="2400" onclick="selectPreset(this)">
+          <div class="preset-name">Galaxy S24</div>
+          <div class="preset-size">1080 × 2400</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Custom size -->
+    <div class="card">
+      <div class="section-title">✏️ カスタムサイズ</div>
+      <div class="size-inputs">
+        <div class="size-input-wrap">
+          <label>幅 (px)</label>
+          <input type="number" id="widthInput" value="1179" min="1" max="9999">
+        </div>
+        <div class="size-sep">×</div>
+        <div class="size-input-wrap">
+          <label>高さ (px)</label>
+          <input type="number" id="heightInput" value="2556" min="1" max="9999">
+        </div>
+      </div>
+    </div>
+
+    <!-- Fit mode -->
+    <div class="card">
+      <div class="section-title">🔲 フィットモード</div>
+      <div class="fit-options">
+        <div class="fit-btn active" data-fit="cover" onclick="selectFit(this)">
+          <div class="fit-icon">⬛</div>
+          <div class="fit-name">カバー</div>
+          <div class="fit-desc">全体を埋める</div>
+        </div>
+        <div class="fit-btn" data-fit="contain" onclick="selectFit(this)">
+          <div class="fit-icon">🔳</div>
+          <div class="fit-name">コンテイン</div>
+          <div class="fit-desc">余白あり</div>
+        </div>
+        <div class="fit-btn" data-fit="stretch" onclick="selectFit(this)">
+          <div class="fit-icon">↔️</div>
+          <div class="fit-name">ストレッチ</div>
+          <div class="fit-desc">比率無視</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BG color (for contain mode) -->
+    <div class="card" id="bgCard">
+      <div class="section-title">🎨 背景カラー（コンテインモード時）</div>
+      <div class="bg-options">
+        <div class="bg-swatch active" style="background:#000000" data-color="#000000" onclick="selectBg(this)"></div>
+        <div class="bg-swatch" style="background:#ffffff" data-color="#ffffff" onclick="selectBg(this)"></div>
+        <div class="bg-swatch" style="background:#1a1a2e" data-color="#1a1a2e" onclick="selectBg(this)"></div>
+        <div class="bg-swatch" style="background:#f5f0eb" data-color="#f5f0eb" onclick="selectBg(this)"></div>
+        <div class="bg-swatch" style="background:#2d1b69" data-color="#2d1b69" onclick="selectBg(this)"></div>
+        <input type="color" id="bgColorPicker" value="#000000" style="width:36px;height:36px;border:none;border-radius:50%;cursor:pointer;padding:0;background:none;" oninput="onBgColorPick(this)">
+      </div>
+    </div>
+
+    <!-- Format & Quality -->
+    <div class="card">
+      <div class="section-title">💾 出力形式</div>
+      <div class="format-options">
+        <div class="format-btn active" data-fmt="image/jpeg" onclick="selectFormat(this)">JPEG</div>
+        <div class="format-btn" data-fmt="image/png" onclick="selectFormat(this)">PNG</div>
+        <div class="format-btn" data-fmt="image/webp" onclick="selectFormat(this)">WEBP</div>
+      </div>
+      <div class="quality-wrap" id="qualityWrap">
+        <div class="quality-row">
+          <span class="quality-label">画質</span>
+          <span class="quality-value" id="qualityDisplay">90%</span>
+        </div>
+        <input type="range" id="qualitySlider" min="10" max="100" value="90" oninput="document.getElementById('qualityDisplay').textContent=this.value+'%'">
+      </div>
+    </div>
+
+  </div>
+
+  <button class="convert-btn" id="convertBtn" onclick="convert()" disabled>
+    変換する →
+  </button>
+
+  <!-- Result -->
+  <div class="result" id="result">
+    <div class="result-card">
+      <div class="section-title" style="margin-bottom:16px">✅ 変換完了</div>
+      <img class="result-preview" id="resultImg" alt="result">
+      <div class="result-info" id="resultInfo"></div>
+      <a class="download-btn" id="downloadBtn" download="wallpaper">
+        ⬇️ ダウンロード
+      </a>
+    </div>
+  </div>
+
+  <canvas id="canvas"></canvas>
+</div>
+
+<script>
+  let imageFile = null;
+  let imgEl = null;
+  let selectedFit = 'cover';
+  let selectedFmt = 'image/jpeg';
+  let selectedBg = '#000000';
+
+  // Upload zone
+  const uploadZone = document.getElementById('uploadZone');
+  const fileInput = document.getElementById('fileInput');
+
+  uploadZone.addEventListener('click', () => fileInput.click());
+  uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+  uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+  uploadZone.addEventListener('drop', e => {
+    e.preventDefault();
+    uploadZone.classList.remove('drag-over');
+    const f = e.dataTransfer.files[0];
+    if (f && f.type.startsWith('image/')) loadImage(f);
+  });
+  fileInput.addEventListener('change', e => {
+    if (e.target.files[0]) loadImage(e.target.files[0]);
+  });
+
+  function loadImage(file) {
+    imageFile = file;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        imgEl = img;
+        document.getElementById('previewImg').src = ev.target.result;
+        document.getElementById('imgInfo').innerHTML =
+          `<span>${img.naturalWidth} × ${img.naturalHeight} px</span><span>${formatBytes(file.size)}</span><span>${file.type.split('/')[1].toUpperCase()}</span>`;
+        document.getElementById('previewWrap').classList.add('show');
+        document.getElementById('convertBtn').disabled = false;
+        document.getElementById('result').classList.remove('show');
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function formatBytes(b) {
+    if (b < 1024) return b + ' B';
+    if (b < 1024*1024) return (b/1024).toFixed(1) + ' KB';
+    return (b/1024/1024).toFixed(1) + ' MB';
+  }
+
+  function selectPreset(btn) {
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('widthInput').value = btn.dataset.w;
+    document.getElementById('heightInput').value = btn.dataset.h;
+  }
+
+  function selectFit(btn) {
+    document.querySelectorAll('.fit-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedFit = btn.dataset.fit;
+  }
+
+  function selectBg(el) {
+    document.querySelectorAll('.bg-swatch').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    selectedBg = el.dataset.color;
+    document.getElementById('bgColorPicker').value = selectedBg;
+  }
+
+  function onBgColorPick(input) {
+    document.querySelectorAll('.bg-swatch').forEach(b => b.classList.remove('active'));
+    selectedBg = input.value;
+  }
+
+  function selectFormat(btn) {
+    document.querySelectorAll('.format-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedFmt = btn.dataset.fmt;
+    document.getElementById('qualityWrap').style.display = selectedFmt === 'image/png' ? 'none' : 'block';
+  }
+
+  function convert() {
+    if (!imgEl) return;
+
+    const W = parseInt(document.getElementById('widthInput').value);
+    const H = parseInt(document.getElementById('heightInput').value);
+    const quality = parseInt(document.getElementById('qualitySlider').value) / 100;
+
+    const canvas = document.getElementById('canvas');
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d');
+
+    // Fill bg
+    ctx.fillStyle = selectedBg;
+    ctx.fillRect(0, 0, W, H);
+
+    const srcW = imgEl.naturalWidth;
+    const srcH = imgEl.naturalHeight;
+
+    if (selectedFit === 'stretch') {
+      ctx.drawImage(imgEl, 0, 0, W, H);
+    } else if (selectedFit === 'cover') {
+      const scale = Math.max(W / srcW, H / srcH);
+      const dw = srcW * scale;
+      const dh = srcH * scale;
+      const dx = (W - dw) / 2;
+      const dy = (H - dh) / 2;
+      ctx.drawImage(imgEl, dx, dy, dw, dh);
+    } else { // contain
+      const scale = Math.min(W / srcW, H / srcH);
+      const dw = srcW * scale;
+      const dh = srcH * scale;
+      const dx = (W - dw) / 2;
+      const dy = (H - dh) / 2;
+      ctx.drawImage(imgEl, dx, dy, dw, dh);
+    }
+
+    const ext = selectedFmt === 'image/png' ? 'png' : selectedFmt === 'image/webp' ? 'webp' : 'jpg';
+    const dataURL = canvas.toDataURL(selectedFmt, quality);
+
+    // Estimate size
+    const base64Len = dataURL.split(',')[1].length;
+    const sizeBytes = Math.round(base64Len * 0.75);
+
+    document.getElementById('resultImg').src = dataURL;
+    document.getElementById('resultInfo').textContent = `${W} × ${H} px ・ 約 ${formatBytes(sizeBytes)}`;
+    const dlBtn = document.getElementById('downloadBtn');
+    dlBtn.href = dataURL;
+    dlBtn.download = `wallpaper.${ext}`;
+
+    document.getElementById('result').classList.add('show');
+    document.getElementById('result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // Sync custom inputs with preset deselect
+  ['widthInput','heightInput'].forEach(id => {
+    document.getElementById(id).addEventListener('input', () => {
+      document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+    });
+  });
+</script>
+</body>
+</html>
